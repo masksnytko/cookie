@@ -66,4 +66,12 @@ class Cookie {
     }
 }
 
-module.exports = new Cookie;
+if (typeof define === 'function' && define.amd) {
+    define(function () {
+        return new Cookie;
+    });
+} else if (typeof module === 'object' && module.exports) {
+    module.exports = new Cookie;
+} else {
+    $.Cookie = new Cookie;
+}
