@@ -1,77 +1,75 @@
 'use strict'
 
 class Cookie {
-    constructor() {
-        let options;
-        let defaultOptions;
-        let config = {
-            setDefaultOptions: {
-                value(v) {
-                    if (v instanceof Object) {
-                        defaultOptions = Object.assign(new Object, v);
-                    }
-                    options = Object.assign(new Object, defaultOptions);
-                }
+    /**
+    * @param {Object} [defaultOptions] - опциональный параметр дефолтных значений куков
+    */
+    constructor(defaultOptions) {
+        
+        let _options;
+
+        Object.defineProperty(this, 'options', {
+            get() {
+                return _options;
             },
-            options: {
-                get() {
-                    return options;
-                },
-                set(v) {
-                    if (v instanceof Object) {
-                        options = v;
-                    }
+            set(v) {
+                if (v instanceof Object) {
+                    _options = v;
                 }
             }
-        };
+        });
+
+        if (defaultOptions instanceof Object) {
+            _options = defaultOptions;
+        } else {
+            _options = {
+                expires: new Date(Date.now() + 30*24*60*60*1000).toUTCString()
+            };
+        }
+        
         let handler = {
             get(target, prop) {
                 return target[prop];
             },
             set(target, prop, value) {
                 
-                if (config[prop]) {
-                    target[prop] = value;
+                if (prop === 'options') {
+                    target.options = value;
                     return;
                 }
-        
+
                 target[prop] = String(value);
                 let updatedCookie = prop + '=' + encodeURIComponent(value);
         
-                for (var key in options) {
-                    updatedCookie += `; ${key}=${options[key]}`;
+                for (var key in _options) {
+                    updatedCookie += `; ${key}=${_options[key]}`;
                 }
         
                 document.cookie = updatedCookie;
             },
             deleteProperty(target, prop) {
-                document.cookie = `${prop}=''; path=${options.path?options.path:'/'}; expires=${new Date().toUTCString()}`;
+                document.cookie = `${prop}=''; path=${_options.path?_options.path:'/'}; expires=${new Date().toUTCString()}`;
                 return delete target[prop];
             }
-        }
-
-        let target = Object.defineProperties(new Object, config);
+        };
 
         document.cookie.split('; ').forEach(v => {
             v = v.split('=');
-            target[v[0]] = decodeURIComponent(v[1]);
-        });
-
-        target.setDefaultOptions({
-            expires: new Date(Date.now() + 30*24*60*60*1000).toUTCString(),
-            path: '/'
+            this[v[0]] = decodeURIComponent(v[1]);
         });
         
-        return new Proxy(target, handler);
+        return new Proxy(this, handler);
     }
 }
 
+let cookie = new Cookie();
+
 if (typeof define === 'function' && define.amd) {
     define(function () {
-        return new Cookie;
+        return cookie;
     });
 } else if (typeof module === 'object' && module.exports) {
-    module.exports = new Cookie;
+    module.exports = cookie;
 } else {
     $.Cookie = new Cookie;
 }
